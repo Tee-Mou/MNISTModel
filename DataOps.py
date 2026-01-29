@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from NeuralNet import MNISTModel
 from torch import nn
+from tqdm import tqdm
 
 
 class DataManager:
@@ -50,17 +51,23 @@ class DataManager:
         train_results = []
         test_results = []
 
-        for epoch in range(epochs):
-            for batch_id, (images, targets) in enumerate(train_loader):
+        print("b")
+
+        for epoch in (pbar_epoch := tqdm(range(epochs))):
+            pbar_epoch.set_description(f"Processing epoch {epoch + 1}...")
+            for batch_id, (images, targets) in (
+                enumerate(pbar := tqdm(train_loader, leave=False))
+            ):
                 one_hot_targets = torch.nn.functional.one_hot(targets, 10)
                 outputs = model(images)
                 train_loss = self.criterion(outputs, one_hot_targets.float())
+                batch_loss = train_loss.item()
+                pbar.desc = f"    Processing Training Batch {batch_id} | Batch Loss = {batch_loss}"
 
                 optimiser.zero_grad()
                 train_loss.backward()
                 optimiser.step()
 
-                batch_loss = train_loss.item()
                 batch_number = batch_id + epoch * len(train_loader)
                 train_results.append((batch_number, batch_loss))                
 
@@ -79,16 +86,19 @@ class DataManager:
         total_tests = len(self.test_data)
         test_accuracy = 0
         test_loss = 0
-        for _, (images, targets) in enumerate(test_loader):
+        for batch_id, (images, targets) in (
+                enumerate(pbar := tqdm(test_loader, leave=False))
+        ):
             with torch.no_grad():
                 one_hot_targets = torch.nn.functional.one_hot(targets, 10)
                 outputs = model(images)
                 predictions = outputs.argmax(1)
-
-                test_loss += self.criterion(outputs, one_hot_targets.float()).item() / len(test_loader)
+                batch_loss = self.criterion(outputs, one_hot_targets.float()).item()
+                test_loss += batch_loss / len(test_loader)
                 for i in range(targets.size(0)):
                     if targets[i] == predictions[i]:
                         test_accuracy += 1
+            pbar.desc = f"Processing Test Batch {batch_id} | Batch Loss = {batch_loss}"
         test_accuracy /= total_tests
         return test_loss, test_accuracy
             
