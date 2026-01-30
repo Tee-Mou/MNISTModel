@@ -1,4 +1,5 @@
 venv
-model
+model/latest.pth
+model/best.pth
 data
 __pycache__

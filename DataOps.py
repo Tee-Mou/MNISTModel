@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision import datasets, transforms, utils
 from torchvision.transforms import ToTensor
@@ -10,6 +11,7 @@ import matplotlib.pyplot as plt
 from NeuralNet import MNISTModel
 from torch import nn
 from tqdm import tqdm
+
 
 
 class DataManager:
@@ -47,14 +49,21 @@ class DataManager:
         best_test_loss = np.inf
         train_loader = DataLoader(dataset=self.train_data, batch_size=batch_size)
         optimiser = optim.SGD(model.parameters(), lr = lr)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer=optimiser,patience=1,mode="max",threshold=0.001)
 
         train_results = []
         test_results = []
 
-        print("b")
-
         for epoch in (pbar_epoch := tqdm(range(epochs))):
-            pbar_epoch.set_description(f"Processing epoch {epoch + 1}...")
+            try:
+                previous_accuracy = test_results[-1][2]
+                previous_epoch = test_results[-1][0]
+            except IndexError:
+                previous_epoch = "N/A"
+                previous_accuracy = 0
+            pbar_epoch.set_description(
+                f"Processing epoch {epoch + 1} | Epoch {previous_epoch} Accuracy: {previous_accuracy} | lr: {scheduler.get_last_lr()}"
+            )
             for batch_id, (images, targets) in (
                 enumerate(pbar := tqdm(train_loader, leave=False))
             ):
@@ -69,10 +78,11 @@ class DataManager:
                 optimiser.step()
 
                 batch_number = batch_id + epoch * len(train_loader)
-                train_results.append((batch_number, batch_loss))                
+                train_results.append((batch_number, batch_loss))       
 
             test_loss, test_accuracy = self.test(model=model)
             test_results.append(((epoch + 1) * len(train_loader), test_loss, test_accuracy))
+            scheduler.step(test_accuracy)
             if test_loss < best_test_loss:
                 best_test_loss = test_loss
                 torch.save(model.state_dict(), "./model/best.pth")
@@ -94,12 +104,13 @@ class DataManager:
                 outputs = model(images)
                 predictions = outputs.argmax(1)
                 batch_loss = self.criterion(outputs, one_hot_targets.float()).item()
-                test_loss += batch_loss / len(test_loader)
+                test_loss += batch_loss
                 for i in range(targets.size(0)):
                     if targets[i] == predictions[i]:
                         test_accuracy += 1
             pbar.desc = f"Processing Test Batch {batch_id} | Batch Loss = {batch_loss}"
         test_accuracy /= total_tests
+        test_loss /= total_tests
         return test_loss, test_accuracy
             
     @staticmethod

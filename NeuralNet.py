@@ -11,9 +11,9 @@ class MNISTModel(nn.Module):
         self.flatten = nn.Flatten()
         self.conv1 = nn.Conv2d(kernel_size=3, padding=1, stride=1, in_channels=1, out_channels=16)
         self.conv2 = nn.Conv2d(kernel_size=3, padding=1, stride=1, in_channels=16, out_channels=16)
-        self.conv3 = nn.Conv2d(kernel_size=3, padding=1, stride=1, in_channels=16, out_channels=8)
-        self.fc1 = nn.Linear(in_features=1600, out_features=10)
-        self.fc2 = nn.Linear(in_features=128, out_features=10)
+        self.conv3 = nn.Conv2d(kernel_size=3, padding=1, stride=1, in_channels=16, out_channels=16)
+        self.fc1 = nn.Linear(in_features=256, out_features=64)
+        self.fc2 = nn.Linear(in_features=64, out_features=10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -22,5 +22,6 @@ class MNISTModel(nn.Module):
         x = F.relu(self.conv3(x))
         x = self.pool(x)
         x = self.flatten(x)
-        x = F.relu(self.fc2(x))
+        x = self.fc1(x)
+        x = self.fc2(x)
         return x

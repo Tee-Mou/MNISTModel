@@ -10,13 +10,16 @@ import matplotlib.pyplot as plt
 
 from DataOps import DataManager
 from NeuralNet import MNISTModel
+from multiprocessing import Process
+import keyboard
 
 def main():
     net = MNISTModel()
+    net.load_state_dict(torch.load("./model/best.pth"))
     manager = DataManager()
     manager.load_mnist()
     # manager.show_image()
-    train_results, test_results = manager.train(net, epochs=100, batch_size=100, lr = 0.001)
+    train_results, test_results = manager.train(net, epochs=10, batch_size=100, lr = 0.0001)
     manager.plot_training_results(train_results, test_results)
 
 if __name__ == "__main__":
