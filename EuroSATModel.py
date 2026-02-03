@@ -8,7 +8,8 @@ class EuroSATModel(nn.Module):
 
     def __init__(self, path = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dropout = nn.Dropout(p=0.25)
+        self.small_dropout = nn.Dropout(p=0.25)
+        self.big_dropout = nn.Dropout(p=0.45)
         self.pool = nn.MaxPool2d(kernel_size=2, padding=1)
         self.flatten = nn.Flatten()
         self.conv1 = nn.Conv2d(kernel_size=3, padding=1, stride=1, in_channels=3, out_channels=16)
@@ -32,13 +33,17 @@ class EuroSATModel(nn.Module):
         return "EuroSAT"
 
     def forward(self, x):
-        x = self.dropout(x)
+        x = self.small_dropout(x)
         x = F.leaky_relu(self.conv1(x))
+        x = self.big_dropout(x)
         x = F.leaky_relu(self.conv2(x))
+        x = self.big_dropout(x)
         x = F.leaky_relu(self.conv3(x))
         x = self.pool(x)
+        x = self.big_dropout(x)
         x = F.leaky_relu(self.conv4(x))
         x = self.pool(x)
+        x = self.big_dropout(x)
         # x = F.leaky_relu(self.conv5(x))
         # x = F.leaky_relu(self.conv6(x))
         # x = self.pool(x)
